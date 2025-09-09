@@ -63,6 +63,7 @@ class SMBRelayServer(Thread):
         self.server = 0
         #Config object
         self.config = config
+        print("Received the following config: %s" % self.config.__dict__)
         #Current target IP
         self.target = None
         #Targets handler
@@ -369,9 +370,19 @@ class SMBRelayServer(Thread):
                 LOG.info("(SMB): Authenticating connection from %s@%s against %s://%s SUCCEED" % (self.authUser, connData['ClientIP'], self.target.scheme, self.target.netloc))
                 # Log this target as processed for this client
 
-                if not self.config.isADCSAttack:
+                if(self.config.adminOnlySessions == True):
+                    if(client.isAdmin() == "TRUE"):
+                        LOG.warning("Session %s has admin rights → adding SOCKS" % self.authUser)
+                        if not self.config.isADCSAttack:
+                            self.targetprocessor.registerTarget(self.target, True, self.authUser)
+                    else:
+                        LOG.warning("Session %s has NO admin rights → skipping SOCKS" % self.authUser)
+                        client.killConnection()
+                        return None, None, STATUS_ACCESS_DENIED
+                
+                else:
                     self.targetprocessor.registerTarget(self.target, True, self.authUser)
-
+            
                 ntlm_hash_data = outputToJohnFormat(connData['CHALLENGE_MESSAGE']['challenge'],
                                                     authenticateMessage['user_name'],
                                                     authenticateMessage['domain_name'], authenticateMessage['lanman'],
@@ -661,11 +672,20 @@ class SMBRelayServer(Thread):
                     return None, [packet], errorCode
                 else:
                     # We have a session, create a thread and do whatever we want
-                    LOG.info("(SMB): Authenticating connection from %s@%s against %s://%s SUCCEED" % (self.authUser, connData['ClientIP'], self.target.scheme, self.target.netloc))
+                    LOG.info("Authenticating against %s://%s as %s SUCCEED" % (self.target.scheme, self.target.netloc, self.authUser))
 
-                    # Log this target as processed for this client
-                    self.targetprocessor.registerTarget(self.target, True, self.authUser)
-
+                    if(self.config.adminOnlySessions == True):
+                        if(client.isAdmin() == "TRUE"):
+                            LOG.warning("Session %s has admin rights → adding SOCKS" % self.authUser)
+                            self.targetprocessor.registerTarget(self.target, True, self.authUser)
+                        else:
+                            LOG.warning("Session %s has NO admin rights → skipping SOCKS" % self.authUser)
+                            client.killConnection()
+                            return None, None, STATUS_ACCESS_DENIED
+                    
+                    else:
+                        self.targetprocessor.registerTarget(self.target, True, self.authUser)
+                    
                     ntlm_hash_data = outputToJohnFormat(connData['CHALLENGE_MESSAGE']['challenge'],
                                                         authenticateMessage['user_name'],
                                                         authenticateMessage['domain_name'],
@@ -741,10 +761,20 @@ class SMBRelayServer(Thread):
             else:
                 # We have a session, create a thread and do whatever we want
                 self.authUser = ('%s/%s' % (sessionSetupData['PrimaryDomain'], sessionSetupData['Account'])).upper()
-                LOG.info("(SMB): Authenticating connection from %s@%s against %s://%s SUCCEED" % (self.authUser, connData['ClientIP'], self.target.scheme, self.target.netloc))
+                LOG.info("Authenticating against %s://%s as %s SUCCEED" % (self.target.scheme, self.target.netloc, self.authUser))
 
-                # Log this target as processed for this client
-                self.targetprocessor.registerTarget(self.target, True, self.authUser)
+                if(self.config.adminOnlySessions == True):
+                    if(client.isAdmin() == "TRUE"):
+                        LOG.warning("Session %s has admin rights → adding SOCKS" % self.authUser)
+                        self.targetprocessor.registerTarget(self.target, True, self.authUser)
+                    else:
+                        LOG.warning("Session %s has NO admin rights → skipping SOCKS" % self.authUser)
+                        client.killConnection()
+                        return None, None, STATUS_ACCESS_DENIED
+                
+                else:
+                    self.targetprocessor.registerTarget(self.target, True, self.authUser)
+           
 
                 ntlm_hash_data = outputToJohnFormat('', sessionSetupData['Account'], sessionSetupData['PrimaryDomain'],
                                                     sessionSetupData['AnsiPwd'], sessionSetupData['UnicodePwd'])

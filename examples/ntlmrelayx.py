@@ -218,7 +218,7 @@ def start_servers(options, threads):
         c.setSCCMDPOptions(options.sccm_dp_extensions, options.sccm_dp_files)
         
         c.setAltName(options.altname)
-
+        c.setAdminOnlySessions(options.admin_only)
         #If the redirect option is set, configure the HTTP server to redirect targets to SMB
         if server is HTTPRelayServer and options.r is not None:
             c.setMode('REDIRECT')
@@ -339,6 +339,7 @@ if __name__ == '__main__':
                         'target system (for SMB and RPC). If not specified for SMB, hashes will be dumped (secretsdump.py must be'
                         ' in the same directory). For RPC no output will be provided.')
 
+    parser.add_argument('-ao','--admin-only', action='store_true', default=False, help='only allow admin sessions')
     #SMB arguments
     smboptions = parser.add_argument_group("SMB client options")
 

@@ -113,6 +113,8 @@ class NTLMRelayxConfig:
         self.SCCMDPExtensions = None
         self.SCCMDPFiles = None
 
+        self.adminOnlySessions = False
+        
     def setSMBChallenge(self, value):
         self.SMBServerChallenge = value
 
@@ -278,6 +280,9 @@ class NTLMRelayxConfig:
     def setAltName(self, altName):
         self.altName = altName
 
+    def setAdminOnlySessions(self, adminOnly):
+        self.adminOnlySessions = adminOnly  
+  
 def parse_listening_ports(value):
     ports = set()
     for entry in value.split(","):
